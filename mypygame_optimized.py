@@ -62,7 +62,7 @@ def generate_problem():
         b = random.randint(1, 12)
         a = b * random.randint(1, 6)
         answer = a // b
-        display = f"{a} / {b}"
+        display = f"{a} ÷ {b}"
     elif op == '+':
         answer = a + b
         display = f"{a} + {b}"
@@ -458,3 +458,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
