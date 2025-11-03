@@ -273,7 +273,7 @@ def main():
                         save_data["coins"] = coins
                         save_data["items"] = items
                         save_game(save_data)
-                        running = False
+                        state = "menu"
                 else:
                     # global ESC to quit from menu/tutorial
                     if event.key == pygame.K_ESCAPE:
@@ -281,7 +281,7 @@ def main():
                         save_data["coins"] = coins
                         save_data["items"] = items
                         save_game(save_data)
-                        running = False
+                        state = "menu"
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
@@ -457,6 +457,3 @@ def main():
     pygame.quit()
 
 main()
-
-
-
