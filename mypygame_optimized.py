@@ -135,7 +135,7 @@ def draw_shop(surface, font_small, player_items, player_coins):
     pygame.draw.rect(surface, (30, 30, 30), rect, border_radius=12)
     pygame.draw.rect(surface, (80, 80, 80), rect, 2, border_radius=12)
     y = rect.y + 48
-    surface.blit(font_small.render("SHOP - Buy Items", True, WHITE), (rect.x + 18, rect.y + 12))
+    surface.blit(font_small.render(f"SHOP - Buy Items           Coin: {player_coins}", True, WHITE), (rect.x + 18, rect.y + 12))
     surface.blit(font_small.render(f"Skip (cost {COST_SKIP}) - You have: {player_items['skip']}", True, WHITE), (rect.x + 20, y))
     y += 46
     surface.blit(font_small.render(f"Shield (cost {COST_SHIELD}) - You have: {player_items['shield']}", True, WHITE), (rect.x + 20, y))
@@ -458,4 +458,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
