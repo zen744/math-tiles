@@ -1,16 +1,18 @@
-# math_game.py
+# math_tiles_full.py
 import pygame
 import random
 import json
-import os
-import sys
 from pathlib import Path
 
+# ---------------------
+# Config / constants
+# ---------------------
 SAVE_PATH = Path(__file__).parent / "savegame.json"
 
 SCREEN_W, SCREEN_H = 800, 600
 FPS = 60
 
+# Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 TEAL = (30, 200, 180)
@@ -18,24 +20,22 @@ DARK = (20, 20, 20)
 GREEN = (60, 200, 60)
 RED = (200, 50, 50)
 YELLOW = (230, 200, 40)
-GRAY = (120, 120, 120)
+GRAY = (160, 160, 160)
+PANEL_BG = (18, 18, 18)
 
+# Gameplay tuning
 BASE_FALL_SPEED = 60
 SPEED_PER_SCORE = 3
 SPAWN_INTERVAL_BASE = 2.0
 SPAWN_INTERVAL_MIN = 0.5
 SPAWN_ACCEL_PER_SCORE = 0.03
+
+# Item costs
 COST_SKIP = 8
 COST_SHIELD = 15
 
-# Menu buttons
-PLAY_BUTTON_RECT = pygame.Rect(0, 0, 0, 0)
-QUIT_BUTTON_RECT = pygame.Rect(0, 0, 0, 0)
-TUTORIAL_BUTTON_RECT = pygame.Rect(0, 0, 0, 0)
-game_state = "menu" # Central state variable
-
 # ---------------------
-# Save/load Fnc
+# Save/load utilities
 # ---------------------
 def load_save():
     if not SAVE_PATH.exists():
@@ -58,151 +58,8 @@ def save_game(data):
         print("Save failed:", e)
 
 # ---------------------
-# Draw Fnc
+# Problem generator
 # ---------------------
-def draw_menu(screen, font):
-    """Draws the main menu and defines button positions."""
-    screen.fill(GRAY)
-    
-    # Draw menu title
-    title_font = pygame.font.SysFont("MV Boli", 120)
-    title_surf = title_font.render("Math Tiles", True, WHITE)
-    screen.blit(title_surf, (SCREEN_W/2 - title_surf.get_width()/2, 100))
-    
-    global PLAY_BUTTON_RECT, QUIT_BUTTON_RECT 
-    
-    # Play Button
-    PLAY_BUTTON_RECT.update(SCREEN_W/2 - 100, 350, 200, 50)
-    pygame.draw.rect(screen, GREEN, PLAY_BUTTON_RECT, border_radius=10) 
-    play_text = font.render("Play", True, WHITE)
-    screen.blit(play_text, play_text.get_rect(center=PLAY_BUTTON_RECT.center))
-    
-    # Tutorial Button
-    TUTORIAL_BUTTON_RECT.update(SCREEN_W/2 - 100, 420, 200, 50)
-    pygame.draw.rect(screen, YELLOW, TUTORIAL_BUTTON_RECT, border_radius=10)
-    tut_text = font.render("Tutorial", True, DARK)
-    screen.blit(tut_text, tut_text.get_rect(center=TUTORIAL_BUTTON_RECT.center))
-
-    # Quit Button
-    QUIT_BUTTON_RECT.update(SCREEN_W/2 - 100, 490, 200, 50)
-    pygame.draw.rect(screen, RED, QUIT_BUTTON_RECT, border_radius=10) 
-    quit_text = font.render("Quit", True, WHITE)
-    screen.blit(quit_text, quit_text.get_rect(center=QUIT_BUTTON_RECT.center))
-    
-    pygame.display.flip()
-
-def draw_tutorial(screen, font_small, font_mid):
-    """Display tutorial / how-to-play instructions."""
-    screen.fill(DARK)
-    
-    font_mid = pygame.font.SysFont("Comic Sans", 48)
-    title = font_mid.render("How to Play Math Tiles", True, WHITE)
-    screen.blit(title, (SCREEN_W/2 - title.get_width()/2, 80))
-
-    lines = [
-        "🧮 Solve the falling math problems before they reach the bottom!",
-        "💡 Click the correct answer on the right panel.",
-        "❤️ You start with 3 lives — lose one for each wrong or missed tile.",
-        "🪙 Earn 1 coin for each correct answer.",
-        "🛍️ Press S to open the shop:",
-        "   - Buy 'Skip' to remove the current problem.",
-        "   - Buy 'Shield' to block one mistake.",
-        "",
-        "🎮 Controls:",
-        "   S - Open/close shop",
-        "   K - Use Skip item",
-        "   ESC - Quit game",
-        "",
-        "Click 'Back' below to return to menu."
-    ]
-
-    font_small = pygame.font.SysFont("Segoe UI Emoji", 20)
-    y = 200
-    for line in lines:
-        text = font_small.render(line, True, WHITE)
-        screen.blit(text, (80, y))
-        y += 25
-
-    # Back button
-    back_rect = pygame.Rect(SCREEN_W - 200, SCREEN_H - 100, 160, 50)
-    pygame.draw.rect(screen, TEAL, back_rect, border_radius=10)
-    back_text = font_small.render("Back", True, BLACK)
-    screen.blit(back_text, back_text.get_rect(center=back_rect.center))
-
-    pygame.display.flip()
-    return back_rect
-
-def draw_hud(surface, font_small, score, coins, lives, high_score, items):
-    """Draws the Heads-Up Display and item counts."""
-    score_txt = font_small.render(f"Score: {score}", True, WHITE)
-    coins_txt = font_small.render(f"Coins: {coins}", True, YELLOW)
-    lives_txt = font_small.render(f"Lives: {lives}", True, RED)
-    high_txt = font_small.render(f"High: {high_score}", True, GRAY)
-    
-    surface.blit(score_txt, (20, 10))
-    surface.blit(coins_txt, (20, 40))
-    surface.blit(lives_txt, (180, 10))
-    surface.blit(high_txt, (180, 40))
-
-    # Draw Skip button
-    skip_btn = pygame.Rect(SCREEN_W - 140, 10, 120, 34)
-    pygame.draw.rect(surface, (70, 70, 70), skip_btn, border_radius=8)
-    skip_label = font_small.render(f"Skip x{items.get('skip',0)}", True, WHITE)
-    surface.blit(skip_label, (skip_btn.x + 8, skip_btn.y + 6))
-
-    # Draw Shield button
-    shield_btn = pygame.Rect(SCREEN_W - 280, 10, 120, 34)
-    pygame.draw.rect(surface, (70, 70, 70), shield_btn, border_radius=8)
-    shield_label = font_small.render(f"Shield x{items.get('shield',0)}", True, WHITE)
-    surface.blit(shield_label, (shield_btn.x + 8, shield_btn.y + 6))
-    
-    shop_hint = font_small.render("Press S for Shop", True, GRAY)
-    surface.blit(shop_hint, (SCREEN_W - 220, 52))
-
-def draw_right_panel(surface, font_big, font_small, answer_buttons):
-    panel_w = 200
-    panel_rect = pygame.Rect(SCREEN_W - panel_w - 20, 100, panel_w, SCREEN_H - 200)
-    pygame.draw.rect(surface, (15, 15, 15), panel_rect, border_radius=12)
-    pygame.draw.rect(surface, (40, 40, 40), panel_rect, 3, border_radius=12)
-
-    for i, (rect, val) in enumerate(answer_buttons):
-        pygame.draw.rect(surface, GREEN, rect, border_radius=10)
-        txt = font_big.render(str(val), True, DARK)
-        surface.blit(txt, (rect.x + (rect.width - txt.get_width()) // 2,
-                          rect.y + (rect.height - txt.get_height()) // 2))
-
-def draw_shop(surface, font_small, player_items, player_coins):
-    w, h = 600, 300
-    rect = pygame.Rect((SCREEN_W - w) // 2, (SCREEN_H - h) // 2, w, h)
-    pygame.draw.rect(surface, (30, 30, 30), rect, border_radius=12)
-    pygame.draw.rect(surface, (80, 80, 80), rect, 2, border_radius=12)
-
-    title = font_small.render("SHOP - Buy Items", True, WHITE)
-    surface.blit(title, (rect.x + 18, rect.y + 12))
-    
-    y_start = rect.y + 60
-    
-    # Shop Info
-    skip_txt = font_small.render(f"Skip (remove problem) - Cost: {COST_SKIP}", True, WHITE)
-    surf_skip = font_small.render(f"You have: {player_items['skip']}", True, YELLOW)
-    surface.blit(skip_txt, (rect.x + 20, y_start))
-    surface.blit(surf_skip, (rect.x + 400, y_start))
-    
-    y_start += 50
-    shield_txt = font_small.render(f"Shield (negate wrong) - Cost: {COST_SHIELD}", True, WHITE)
-    surf_shield = font_small.render(f"You have: {player_items['shield']}", True, YELLOW)
-    surface.blit(shield_txt, (rect.x + 20, y_start))
-    surface.blit(surf_shield, (rect.x + 400, y_start))
-
-    y_start += 70
-    instruction = font_small.render("Click item text to buy. Press S to close shop.", True, GRAY)
-    surface.blit(instruction, (rect.x + 20, y_start))
-    
-    return rect
-
-# --------------------
-# Create Problem
-# --------------------
 def generate_problem():
     op = random.choice(['+', '-', '*', '/'])
     a = random.randint(1, 12)
@@ -211,7 +68,7 @@ def generate_problem():
         b = random.randint(1, 12)
         a = b * random.randint(1, 6)
         answer = a // b
-        display = f"{a} ÷ {b}"
+        display = f"{a} / {b}"
     elif op == '+':
         answer = a + b
         display = f"{a} + {b}"
@@ -224,15 +81,19 @@ def generate_problem():
     return display, answer
 
 def make_choices(correct):
-    choices = [correct]
+    choices = {correct}
     while len(choices) < 3:
         delta = random.randint(-10, 10)
         candidate = correct + delta
         if candidate != correct and -100 <= candidate <= 100:
-            choices.append(candidate)
+            choices.add(candidate)
+    choices = list(choices)
+    random.shuffle(choices)
+    return choices
 
-    return random.sample(choices, 3)
-
+# ---------------------
+# Classes
+# ---------------------
 class ProblemTile:
     def __init__(self, x, y, problem_str, answer, fall_speed):
         self.x = x
@@ -256,194 +117,307 @@ class ProblemTile:
         pygame.draw.rect(surf, BLACK, self.rect, 2, border_radius=8)
 
 # ---------------------
-# Game Logic Func
+# Drawing helpers
 # ---------------------
+def draw_right_panel(surface, font_big, answer_buttons):
+    panel_w = 200
+    panel_rect = pygame.Rect(SCREEN_W - panel_w - 20, 60, panel_w, SCREEN_H - 140)
+    pygame.draw.rect(surface, PANEL_BG, panel_rect, border_radius=12)
+    pygame.draw.rect(surface, (40, 40, 40), panel_rect, 3, border_radius=12)
+    for rect, val in answer_buttons:
+        pygame.draw.rect(surface, GREEN, rect, border_radius=10)
+        txt = font_big.render(str(val), True, DARK)
+        surface.blit(txt, (rect.x + (rect.width - txt.get_width()) // 2,
+                           rect.y + (rect.height - txt.get_height()) // 2))
 
-def init_game_variables(save_data):
-    return {
-        "tiles": [],
-        "score": 0,
-        "lives": 3,
-        "spawn_timer": 0.0,
-        "spawn_interval": SPAWN_INTERVAL_BASE,
-        "game_over": False,
-        "shop_open": False,
-        "high_score": save_data.get("high_score", 0),
-        "coins": save_data.get("coins", 0),
-        "items": save_data.get("items", {"skip": 0, "shield": 0}),
+def draw_hud(surface, font_small, score, coins, lives, high_score):
+    surface.blit(font_small.render(f"Score: {score}", True, WHITE), (20, 10))
+    surface.blit(font_small.render(f"Coins: {coins}", True, YELLOW), (20, 40))
+    surface.blit(font_small.render(f"Lives: {lives}", True, RED), (180, 10))
+    surface.blit(font_small.render(f"High: {high_score}", True, GRAY), (180, 40))
+
+def draw_shop(surface, font_small, player_items, player_coins):
+    w, h = 800, 600
+    rect = pygame.Rect((SCREEN_W - w) // 2, (SCREEN_H - h) // 2, w, h)
+    # translucent overlay behind shop
+    overlay = pygame.Surface((SCREEN_W, SCREEN_H))
+    overlay.set_alpha(150)
+    overlay.fill((0,0,0))
+    surface.blit(overlay, (0,0))
+    pygame.draw.rect(surface, (30, 30, 30), rect, border_radius=12)
+    pygame.draw.rect(surface, (80, 80, 80), rect, 2, border_radius=12)
+    y = rect.y + 48
+    surface.blit(font_small.render("SHOP - Buy Items", True, WHITE), (rect.x + 18, rect.y + 12))
+    surface.blit(font_small.render(f"Skip (cost {COST_SKIP}) - You have: {player_items['skip']}", True, WHITE), (rect.x + 20, y))
+    y += 46
+    surface.blit(font_small.render(f"Shield (cost {COST_SHIELD}) - You have: {player_items['shield']}", True, WHITE), (rect.x + 20, y))
+    y += 60
+    surface.blit(font_small.render("Click item text to buy. Press S to close shop.", True, GRAY), (rect.x + 20, y))
+    return rect
+
+# ---------------------
+# Menu and Tutorial Screens
+# ---------------------
+def draw_menu(screen, font_title, font_button):
+    screen.fill((100, 100, 100))
+    title = font_title.render("Math Tiles", True, WHITE)
+    screen.blit(title, (SCREEN_W//2 - title.get_width()//2, 110))
+
+    buttons = {
+        "Play": pygame.Rect(SCREEN_W//2 - 100, 300, 200, 60),
+        "Tutorial": pygame.Rect(SCREEN_W//2 - 100, 390, 200, 60),
+        "Quit": pygame.Rect(SCREEN_W//2 - 100, 480, 200, 60)
     }
+    pygame.draw.rect(screen, GREEN, buttons["Play"], border_radius=12)
+    pygame.draw.rect(screen, YELLOW, buttons["Tutorial"], border_radius=12)
+    pygame.draw.rect(screen, RED, buttons["Quit"], border_radius=12)
 
-def lose_life(game_vars, save_data):
-    # use available shield
-    if game_vars["items"].get("shield", 0) > 0:
-        game_vars["items"]["shield"] -= 1
-        return
-    # take hit
-    game_vars["lives"] -= 1
-    if game_vars["lives"] <= 0:
-        game_vars["game_over"] = True
-        
-        # Save high score, items n coins
-        if game_vars["score"] > game_vars["high_score"]:
-            game_vars["high_score"] = game_vars["score"]
-        
-        save_data["high_score"] = max(game_vars["high_score"], save_data.get("high_score", 0))
-        save_data["coins"] = game_vars["coins"]
-        save_data["items"] = game_vars["items"]
-        save_game(save_data)
+    for label, rect in buttons.items():
+        txt = font_button.render(label, True, WHITE)
+        screen.blit(txt, (rect.centerx - txt.get_width()//2, rect.centery - txt.get_height()//2))
 
-def spawn_tile(game_vars):
-    """Creates a new ProblemTile and adds it to the list."""
-    # spd scale
-    fall_speed = BASE_FALL_SPEED + game_vars["score"] * SPEED_PER_SCORE
-    x = 40
-    y = -80
-    pstr, ans = generate_problem()
-    tile = ProblemTile(x, y, pstr, ans, fall_speed)
-    tile.choices = make_choices(ans)
-    game_vars["tiles"].append(tile)
+    return buttons
 
-def get_active_tile(game_vars):
-    """Returns the current active tile."""
-    return game_vars["tiles"][0] if game_vars["tiles"] else None
+def draw_tutorial(screen, font_title, font_body):
+    screen.fill(BLACK)
+    title = font_title.render("How to Play Math Tiles", True, WHITE)
+    screen.blit(title, (SCREEN_W//2 - title.get_width()//2, 30))
+
+    lines = [
+        "Solve falling math problems before they reach the bottom!",
+        "Click the correct answer on the right panel.",
+        "You start with 3 lives — lose one for each wrong or missed tile.",
+        "Earn 1 coin for each correct answer.",
+        "Press S to open the shop:",
+        "  - Buy 'Skip' to remove the current problem.",
+        "  - Buy 'Shield' to block one mistake.",
+        "Controls:",
+        "  S - Open/close shop",
+        "  K - Use Skip item",
+        "  ESC - Quit game",
+        "Click 'Back' below to return to menu."
+    ]
+    y = 120
+    for line in lines:
+        txt = font_body.render(line, True, WHITE)
+        screen.blit(txt, (60, y))
+        y += 34
+
+    back_btn = pygame.Rect(SCREEN_W//2 - 60, SCREEN_H - 60, 120, 45)
+    pygame.draw.rect(screen, TEAL, back_btn, border_radius=10)
+    txt = font_body.render("Back", True, BLACK)
+    screen.blit(txt, (back_btn.centerx - txt.get_width()//2, back_btn.centery - txt.get_height()//2))
+    return back_btn
 
 # ---------------------
-# Main Game Loop
+# Main
 # ---------------------
 def main():
     pygame.init()
-
-    global game_state
     screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
     pygame.display.set_caption("Math Tiles — Math Game")
     clock = pygame.time.Clock()
 
-    font_big = pygame.font.SysFont("Comic Sans", 48)
-    font_mid = pygame.font.SysFont("Comic Sans", 35)
-    font_small = pygame.font.SysFont("Comic Sans", 20)
+    # Fonts (Comic Sans)
+    # Title big, menu button size, tutorial body smaller
+    font_title = pygame.font.SysFont("Comic Sans MS", 50, bold=True)
+    font_menu_btn = pygame.font.SysFont("Comic Sans MS", 36, bold=True)
+    font_big = pygame.font.SysFont("Comic Sans MS", 48)
+    font_mid = pygame.font.SysFont("Comic Sans MS", 36)
+    font_body = pygame.font.SysFont("Comic Sans MS", 22)   # tutorial body size
+    font_small = pygame.font.SysFont("Comic Sans MS", 20)
 
+    # Load save
     save_data = load_save()
-    game_vars = init_game_variables(save_data)
-    
-    spawn_tile(game_vars)
+    high_score = save_data.get("high_score", 0)
+    coins = save_data.get("coins", 0)
+    items = save_data.get("items", {"skip": 0, "shield": 0})
 
-    # Buttons setup
-    global PLAY_BUTTON_RECT, QUIT_BUTTON_RECT
-    PLAY_BUTTON_RECT = pygame.Rect(0, 0, 0, 0)
-    QUIT_BUTTON_RECT = pygame.Rect(0, 0, 0, 0)
+    # Game state
+    state = "menu"  # "menu", "tutorial", "game"
+    running = True
 
-    # ans buttons
+    # Gameplay variables (created/reset when entering game)
+    def make_game_state():
+        tiles = []
+        score = 0
+        lives = 3
+        spawn_timer = 0.0
+        spawn_interval = SPAWN_INTERVAL_BASE
+        game_over = False
+        shop_open = False
+        return tiles, score, lives, spawn_timer, spawn_interval, game_over, shop_open
+
+    tiles, score, lives, spawn_timer, spawn_interval, game_over, shop_open = make_game_state()
+
+    # Right-answer buttons setup
     button_w, button_h = 160, 80
     right_x = SCREEN_W - button_w - 40
     btn_y_positions = [140, 260, 380]
-    answer_buttons = [(pygame.Rect(right_x, y, button_w, button_h), 0) for y in btn_y_positions]
+    answer_buttons = [(pygame.Rect(right_x, y, button_w, button_h), "-") for y in btn_y_positions]
 
-    running = True
+    def get_active_tile():
+        return tiles[0] if tiles else None
+
+    def spawn_tile():
+        fall_speed = BASE_FALL_SPEED + score * SPEED_PER_SCORE
+        x = 40
+        y = -80
+        pstr, ans = generate_problem()
+        tiles.append(ProblemTile(x, y, pstr, ans, fall_speed))
+
+    # Start with one tile when game begins
+    # (we spawn when entering the game state)
+    menu_buttons = {}
+    tutorial_back = None
+
     while running:
         dt = clock.tick(FPS) / 1000.0
-        events = pygame.event.get()
-
-        # Event
-        for event in events:
+        for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                # save and exit
+                save_data["high_score"] = max(high_score, score, save_data.get("high_score", 0))
+                save_data["coins"] = coins
+                save_data["items"] = items
+                save_game(save_data)
                 running = False
-                
-            if game_state == "menu":
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if PLAY_BUTTON_RECT.collidepoint(event.pos):
-                        game_state = "playing"
-                    elif TUTORIAL_BUTTON_RECT.collidepoint(event.pos):
-                        game_state = "tutorial"
-                    elif QUIT_BUTTON_RECT.collidepoint(event.pos):
-                        running = False
 
-            elif game_state == "tutorial":
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if back_button.collidepoint(event.pos):
-                        game_state = "menu"
-
-            elif game_state == "playing":
-                if event.type == pygame.KEYDOWN:
+            elif event.type == pygame.KEYDOWN:
+                if state == "game":
                     if event.key == pygame.K_s:
-                        game_state = "shop"
-                    elif event.key == pygame.K_ESCAPE:
+                        shop_open = not shop_open
+                    if event.key == pygame.K_ESCAPE:
+                        # save and exit from game
+                        save_data["high_score"] = max(high_score, score, save_data.get("high_score", 0))
+                        save_data["coins"] = coins
+                        save_data["items"] = items
+                        save_game(save_data)
                         running = False
-                    elif event.key == pygame.K_k and not game_vars["game_over"]:
-                        # Use available skip
-                        if game_vars["items"].get("skip", 0) > 0 and game_vars["tiles"]:
-                            game_vars["items"]["skip"] -= 1
-                            game_vars["tiles"].pop(0)
+                else:
+                    # global ESC to quit from menu/tutorial
+                    if event.key == pygame.K_ESCAPE:
+                        save_data["high_score"] = max(high_score, score, save_data.get("high_score", 0))
+                        save_data["coins"] = coins
+                        save_data["items"] = items
+                        save_game(save_data)
+                        running = False
 
-                # mouse click in game
-                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    mx, my = event.pos
-                    if game_vars["game_over"]:
-                        # Click to restart
-                        game_vars = init_game_variables(save_data)
-                        spawn_tile(game_vars)
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mx, my = event.pos
+
+                if state == "menu":
+                    for name, rect in menu_buttons.items():
+                        if rect.collidepoint(mx, my):
+                            if name == "Play":
+                                # enter game
+                                state = "game"
+                                tiles, score, lives, spawn_timer, spawn_interval, game_over, shop_open = make_game_state()
+                                spawn_tile()
+                            elif name == "Tutorial":
+                                state = "tutorial"
+                            elif name == "Quit":
+                                save_data["high_score"] = max(high_score, score, save_data.get("high_score", 0))
+                                save_data["coins"] = coins
+                                save_data["items"] = items
+                                save_game(save_data)
+                                running = False
+
+                elif state == "tutorial":
+                    if tutorial_back and tutorial_back.collidepoint(mx, my):
+                        state = "menu"
+
+                elif state == "game":
+                    if game_over:
+                        # click anywhere to restart (like before)
+                        tiles, score, lives, spawn_timer, spawn_interval, game_over, shop_open = make_game_state()
+                        spawn_tile()
                         continue
 
-                    # Check clicked ans button
+                    if shop_open:
+                        # shop click areas relative to center rect
+                        w, h = 700, 320
+                        rect = pygame.Rect((SCREEN_W - w) // 2, (SCREEN_H - h) // 2, w, h)
+                        skip_area = pygame.Rect(20, 48, 380, 34)
+                        shield_area = pygame.Rect(20, 94, 380, 34)
+                        if skip_area.collidepoint(mx, my):
+                            if coins >= COST_SKIP:
+                                coins -= COST_SKIP
+                                items["skip"] = items.get("skip", 0) + 1
+                        elif shield_area.collidepoint(mx, my):
+                            if coins >= COST_SHIELD:
+                                coins -= COST_SHIELD
+                                items["shield"] = items.get("shield", 0) + 1
+                        # clicking other places doesn't close the shop (press S)
+                        continue
+
+                    # check answer buttons
                     for rect, val in answer_buttons:
                         if rect.collidepoint(mx, my):
-                            active = get_active_tile(game_vars)
-                            if not active: break
-                            
+                            active = get_active_tile()
+                            if not active:
+                                break
                             if val == active.answer:
-                                # Correct
-                                game_vars["score"] += 1
-                                game_vars["coins"] += 1
-                                if game_vars["tiles"]:
-                                    game_vars["tiles"].pop(0)
-                                    game_vars["spawn_interval"] = max(SPAWN_INTERVAL_MIN,
-                                                                      SPAWN_INTERVAL_BASE - game_vars["score"] * SPAWN_ACCEL_PER_SCORE)
+                                score += 1
+                                coins += 1
+                                if tiles:
+                                    tiles.pop(0)
+                                spawn_interval = max(SPAWN_INTERVAL_MIN,
+                                                     SPAWN_INTERVAL_BASE - score * SPAWN_ACCEL_PER_SCORE)
                             else:
-                                # Wrong
-                                lose_life(game_vars, save_data)
+                                if items.get("shield", 0) > 0:
+                                    items["shield"] -= 1
+                                else:
+                                    lives -= 1
+                                    if lives <= 0:
+                                        game_over = True
+                                        if score > high_score:
+                                            high_score = score
+                                        save_data["high_score"] = max(high_score, save_data.get("high_score", 0))
+                                        save_data["coins"] = coins
+                                        save_data["items"] = items
+                                        save_game(save_data)
                             break
-                            
-            elif game_state == "shop":
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
-                    game_state = "playing" # Close shop
-                
-                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    mx, my = event.pos
-                    
-                    y_base = SCREEN_H/2 - 150 + 60
-                    skip_area = pygame.Rect(SCREEN_W/2 - 300 + 20, y_base, 380, 40)
-                    shield_area = pygame.Rect(SCREEN_W/2 - 300 + 20, y_base + 50, 380, 40)
-                    
-                    if skip_area.collidepoint(mx, my):
-                        if game_vars["coins"] >= COST_SKIP:
-                            game_vars["coins"] -= COST_SKIP
-                            game_vars["items"]["skip"] = game_vars["items"].get("skip", 0) + 1
-                    elif shield_area.collidepoint(mx, my):
-                        if game_vars["coins"] >= COST_SHIELD:
-                            game_vars["coins"] -= COST_SHIELD
-                            game_vars["items"]["shield"] = game_vars["items"].get("shield", 0) + 1
 
+                    # quick skip/shield buttons top-right
+                    skip_btn = pygame.Rect(SCREEN_W - 140, 10, 120, 34)
+                    shield_btn = pygame.Rect(SCREEN_W - 280, 10, 120, 34)
+                    if skip_btn.collidepoint(mx, my):
+                        if items.get("skip", 0) > 0 and tiles:
+                            items["skip"] -= 1
+                            tiles.pop(0)
+                    if shield_btn.collidepoint(mx, my):
+                        # nothing on click; shield is passive. could open shop.
+                        pass
 
-        # not run if in menu or shop
-        if game_state == "playing" and not game_vars["game_over"]:
-            
-            # Tile spd overtime
-            for t in game_vars["tiles"]:
-                t.fall_speed = BASE_FALL_SPEED + game_vars["score"] * SPEED_PER_SCORE
+        # --- Game update ---
+        if state == "game" and not game_over and not shop_open:
+            spawn_timer += dt
+            if spawn_timer >= spawn_interval:
+                spawn_timer = 0
+                spawn_tile()
+
+            for t in tiles:
+                t.fall_speed = BASE_FALL_SPEED + score * SPEED_PER_SCORE
                 t.update(dt)
 
-            # Check for missed tile
-            if game_vars["tiles"] and game_vars["tiles"][0].y > SCREEN_H:
-                game_vars["tiles"].pop(0)
-                lose_life(game_vars, save_data)
-            
-            # Tile Spawn
-            game_vars["spawn_timer"] += dt
-            if game_vars["spawn_timer"] >= game_vars["spawn_interval"]:
-                game_vars["spawn_timer"] = 0
-                spawn_tile(game_vars)
+        # Missed tile handling
+        if state == "game" and tiles and tiles[0].y > SCREEN_H:
+            tiles.pop(0)
+            if items.get("shield", 0) > 0:
+                items["shield"] -= 1
+            else:
+                lives -= 1
+                if lives <= 0:
+                    game_over = True
+                    if score > high_score:
+                        high_score = score
+                    save_data["high_score"] = max(high_score, save_data.get("high_score", 0))
+                    save_data["coins"] = coins
+                    save_data["items"] = items
+                    save_game(save_data)
 
-        # Upd ans buttons on active tile
-        active = get_active_tile(game_vars)
+        # Update right panel choices
+        active = get_active_tile()
         if active:
             for i, (rect, _) in enumerate(answer_buttons):
                 answer_buttons[i] = (rect, active.choices[i])
@@ -451,52 +425,60 @@ def main():
             for i, (rect, _) in enumerate(answer_buttons):
                 answer_buttons[i] = (rect, "-")
 
-        # Draw Menu
-        if game_state == "menu":
-            draw_menu(screen, font_mid)
-        elif game_state == "tutorial":
-            back_button = draw_tutorial(screen, font_small, font_mid)
-        
-        else:
+        # --- Draw ---
+        if state == "menu":
+            menu_buttons = draw_menu(screen, font_title, font_menu_btn)
+
+        elif state == "tutorial":
+            tutorial_back = draw_tutorial(screen, font_title, font_body)
+
+        elif state == "game":
             screen.fill((12, 12, 20))
-            # Draw bg n tile
             pygame.draw.rect(screen, (63, 63, 80), (20, 80, SCREEN_W - 260, SCREEN_H - 140), border_radius=10)
-            for t in game_vars["tiles"]:
+
+            # draw tiles
+            for t in tiles:
                 t.draw(screen, font_mid)
 
-            # Draw UI
-            draw_right_panel(screen, font_big, font_small, answer_buttons)
-            draw_hud(screen, font_small, game_vars["score"], game_vars["coins"], 
-                     game_vars["lives"], game_vars["high_score"], game_vars["items"])
+            # draw right panel
+            draw_right_panel(screen, font_big, answer_buttons)
 
-            # Draw Game Over screen
-            if game_vars["game_over"]:
+            # HUD
+            draw_hud(screen, font_small, score, coins, lives, high_score)
+
+            # quick item buttons
+            skip_btn = pygame.Rect(SCREEN_W - 140, 10, 120, 34)
+            pygame.draw.rect(screen, (70,70,70), skip_btn, border_radius=8)
+            skip_label = font_small.render(f"Skip x{items.get('skip',0)}", True, WHITE)
+            screen.blit(skip_label, (skip_btn.x + 20, skip_btn.y + 0))
+
+            shield_btn = pygame.Rect(SCREEN_W - 280, 10, 120, 34)
+            pygame.draw.rect(screen, (70,70,70), shield_btn, border_radius=8)
+            shield_label = font_small.render(f"Shield x{items.get('shield',0)}", True, WHITE)
+            screen.blit(shield_label, (shield_btn.x + 10, shield_btn.y + 0))
+
+            shop_hint = font_small.render("Press S to open Shop", True, GRAY)
+            screen.blit(shop_hint, (SCREEN_W - 220, 52))
+
+            if shop_open:
+                draw_shop(screen, font_small, items, coins)
+
+            if game_over:
                 go_rect = pygame.Rect(80, 120, SCREEN_W - 160, SCREEN_H - 240)
-                pygame.draw.rect(screen, (20, 20, 20), go_rect, border_radius=12)
-                pygame.draw.rect(screen, (150, 150, 150), go_rect, 2, border_radius=12)
-                
+                pygame.draw.rect(screen, (20,20,20), go_rect, border_radius=12)
+                pygame.draw.rect(screen, (150,150,150), go_rect, 2, border_radius=12)
                 title = font_big.render("GAME OVER", True, RED)
-                screen.blit(title, title.get_rect(centerx=go_rect.centerx, y=go_rect.y + 30))
-                sc = font_mid.render(f"Score: {game_vars['score']}", True, WHITE)
-                screen.blit(sc, sc.get_rect(centerx=go_rect.centerx, y=go_rect.y + 120))
-                hi = font_mid.render(f"High Score: {game_vars['high_score']}", True, GRAY)
-                screen.blit(hi, hi.get_rect(centerx=go_rect.centerx, y=go_rect.y + 160))
+                screen.blit(title, (go_rect.x + (go_rect.width - title.get_width()) // 2, go_rect.y + 30))
+                sc = font_mid.render(f"Score: {score}", True, WHITE)
+                screen.blit(sc, (go_rect.x + (go_rect.width - sc.get_width()) // 2, go_rect.y + 120))
+                hi = font_mid.render(f"High Score: {high_score}", True, GRAY)
+                screen.blit(hi, (go_rect.x + (go_rect.width - hi.get_width()) // 2, go_rect.y + 160))
                 inst = font_small.render("Click anywhere to restart", True, GRAY)
-                screen.blit(inst, inst.get_rect(centerx=go_rect.centerx, y=go_rect.y + 220))
-            
-            # Draw Shop screen overlay
-            elif game_state == "shop":
-                draw_shop(screen, font_small, game_vars["items"], game_vars["coins"])
-            
-            pygame.display.flip()
+                screen.blit(inst, (go_rect.x + (go_rect.width - inst.get_width()) // 2, go_rect.y + 220))
 
-    # Final Cleanup
-    save_data["high_score"] = max(game_vars["high_score"], game_vars["score"], save_data.get("high_score", 0))
-    save_data["coins"] = game_vars["coins"]
-    save_data["items"] = game_vars["items"]
-    save_game(save_data)
-    
+        pygame.display.flip()
+
     pygame.quit()
-    sys.exit()
 
-main()
+if __name__ == "__main__":
+    main()
