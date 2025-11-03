@@ -180,7 +180,7 @@ def draw_tutorial(screen, font_title, font_body):
         "Controls:",
         "  S - Open/close shop",
         "  K - Use Skip item",
-        "  ESC - Quit game",
+        "  ESC - Back to menu",
         "Click 'Back' below to return to menu."
     ]
     y = 120
