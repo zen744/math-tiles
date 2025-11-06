@@ -1,9 +1,3 @@
-"""
-math_tiles_oop_v2.py
-OOP refactor of mypygame_optimized.py (single-file).
-Preserves gameplay, visuals, fonts, and layout exactly as in the original.
-"""
-
 import pygame
 import random
 import json
@@ -27,18 +21,18 @@ PANEL_BG = (18, 18, 18)
 
 # Sounds
 pygame.mixer.init()
-correct_sfx = pygame.mixer.Sound("soundboards/correct.mp3")
-wrong_sfx = pygame.mixer.Sound("soundboards/wrong.mp3")
-oof_sfx = pygame.mixer.Sound("soundboards/oof.mp3")
-taco_bell_sfx = pygame.mixer.Sound("soundboards/taco_bell.mp3")
-button1_sfx = pygame.mixer.Sound("soundboards/button1.wav")
-button2_sfx = pygame.mixer.Sound("soundboards/button2.wav")
-skip_sfx = pygame.mixer.Sound("soundboards/skip.wav")
-shield_sfx = pygame.mixer.Sound("soundboards/shield.wav")
-kaching_sfx = pygame.mixer.Sound("soundboards/kaching.mp3")
-error_sfx = pygame.mixer.Sound("soundboards/error.wav")
-open_shop_sfx = pygame.mixer.Sound("soundboards/open_shop.wav")
-close_shop_sfx = pygame.mixer.Sound("soundboards/close_shop.wav")
+correct_sfx = pygame.mixer.Sound(Path(__file__).parent/"soundboards/correct.mp3")
+wrong_sfx = pygame.mixer.Sound(Path(__file__).parent/"soundboards/wrong.mp3")
+oof_sfx = pygame.mixer.Sound(Path(__file__).parent/"soundboards/oof.mp3")
+taco_bell_sfx = pygame.mixer.Sound(Path(__file__).parent/"soundboards/taco_bell.mp3")
+button1_sfx = pygame.mixer.Sound(Path(__file__).parent/"soundboards/button1.wav")
+button2_sfx = pygame.mixer.Sound(Path(__file__).parent/"soundboards/button2.wav")
+skip_sfx = pygame.mixer.Sound(Path(__file__).parent/"soundboards/skip.wav")
+shield_sfx = pygame.mixer.Sound(Path(__file__).parent/"soundboards/shield.wav")
+kaching_sfx = pygame.mixer.Sound(Path(__file__).parent/"soundboards/kaching.mp3")
+error_sfx = pygame.mixer.Sound(Path(__file__).parent/"soundboards/error.wav")
+open_shop_sfx = pygame.mixer.Sound(Path(__file__).parent/"soundboards/open_shop.wav")
+close_shop_sfx = pygame.mixer.Sound(Path(__file__).parent/"soundboards/close_shop.wav")
 
 # Gameplay tuning
 BASE_FALL_SPEED = 60
@@ -253,7 +247,7 @@ class GameState:
     def spawn_tile(self):
         fall_speed = BASE_FALL_SPEED + self.score * SPEED_PER_SCORE
         x = 40
-        y = 75  # preserved from mypygame_optimized.py
+        y = 75
         pstr, ans = generate_problem()
         self.tiles.append(ProblemTile(x, y, pstr, ans, fall_speed))
 
@@ -267,7 +261,7 @@ class GameState:
         self.shop_open = False
 
     def update_save_values(self):
-        self.save_data["high_score"] = max(self.high_score, self.save_data.get("high_score", 0))
+        self.save_data["high_score"] = max(self.high_score, self.save_data.get("high_score"))
         self.save_data["coins"] = self.coins
         self.save_data["items"] = self.items
 
@@ -281,7 +275,7 @@ class GameApp:
         self.ui = UIManager(self.screen)
 
         self.save_data = load_save()
-        self.high_score = self.save_data.get("high_score", 0)
+        self.high_score = self.save_data.get("high_score")
 
         self.state = "menu"  # "menu", "tutorial", "game"
         self.gs = GameState(self.save_data)
@@ -409,8 +403,6 @@ class GameApp:
                                 if not active:
                                     break
                                 if val == active.answer:
-                                    # flash green
-                                    self._flash_button(i, GREEN)
                                     self.gs.score += 1
                                     self.gs.coins += 1
                                     if self.gs.tiles:
@@ -467,7 +459,6 @@ class GameApp:
                     t.fall_speed = BASE_FALL_SPEED + self.gs.score * SPEED_PER_SCORE
                     t.update(dt)
 
-            # Missed tile (preserved threshold from mypygame_optimized.py)
             if self.state == "game" and self.gs.tiles and self.gs.tiles[0].y > SCREEN_H - 130:
                 self.gs.tiles.pop(0)
                 if self.gs.items.get("shield", 0) > 0:
