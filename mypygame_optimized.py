@@ -407,8 +407,7 @@ class GameApp:
                                     self.gs.coins += 1
                                     if self.gs.tiles:
                                         self.gs.tiles.pop(0)
-                                    self.gs.spawn_interval = max(SPAWN_INTERVAL_MIN,
-                                                                SPAWN_INTERVAL_BASE - self.gs.score * SPAWN_ACCEL_PER_SCORE)
+                                    self.gs.spawn_interval = max(SPAWN_INTERVAL_MIN,SPAWN_INTERVAL_BASE - self.gs.score * SPAWN_ACCEL_PER_SCORE)
                                     correct_sfx.play()
 
                                 else:
@@ -560,3 +559,4 @@ class GameApp:
 # ----------------- Entry point ----------------- #
 if __name__ == "__main__":
     GameApp().run()
+
