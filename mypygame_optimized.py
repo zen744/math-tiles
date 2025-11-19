@@ -47,8 +47,6 @@ COST_SHIELD = 15
 
 # ---------------- Save Manager (keeps same names / behavior) ---------------- #
 def load_save():
-    if not SAVE_PATH.exists():
-        return {"high_score": 0, "coins": 0, "items": {"skip": 0, "shield": 0}}
     try:
         with open(SAVE_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -111,12 +109,12 @@ class ProblemTile:
         self.width = ProblemTile.WIDTH
         self.height = ProblemTile.HEIGHT
         self.fall_speed = fall_speed
-        self.rect = pygame.Rect(self.x, int(self.y), self.width, self.height)
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
         self.choices = make_choices(answer)
 
     def update(self, dt):
         self.y += self.fall_speed * dt
-        self.rect.y = int(self.y)
+        self.rect.y = self.y
 
     def draw(self, surf, font):
         pygame.draw.rect(surf, TEAL, self.rect, border_radius=8)
@@ -144,12 +142,11 @@ class UIManager:
         for i, (rect, val) in enumerate(answer_buttons):
         # check for flash color
             color = GREEN
-            if hasattr(self, "button_flash") and self.button_flash[i]:
+            if self.button_flash[i]:
                 color = self.button_flash[i]
             pygame.draw.rect(self.screen, color, rect, border_radius=10)
             txt = self.font_big.render(str(val), True, DARK)
-            self.screen.blit(txt, (rect.x + (rect.width - txt.get_width()) // 2,
-                                rect.y + (rect.height - txt.get_height()) // 2))
+            self.screen.blit(txt, (rect.x + (rect.width - txt.get_width()) // 2,rect.y + (rect.height - txt.get_height()) // 2))
 
     def draw_hud(self, score, coins, lives, high_score):
         self.screen.blit(self.font_small.render(f"Score: {score}", True, WHITE), (20, 10))
@@ -159,10 +156,7 @@ class UIManager:
 
     def draw_shop(self, player_items, player_coins):
         w, h = 800, 600
-        rect = pygame.Rect((SCREEN_W - w) // 2, (SCREEN_H - h) // 2, w, h)
-        overlay = pygame.Surface((SCREEN_W, SCREEN_H))
-        overlay.fill((0,0,0))
-        self.screen.blit(overlay, (0,0))
+        rect = pygame.Rect(0, 0, w, h)
         pygame.draw.rect(self.screen, (30, 30, 30), rect, border_radius=12)
         pygame.draw.rect(self.screen, (80, 80, 80), rect, 2, border_radius=12)
         y = rect.y + 48
@@ -172,7 +166,7 @@ class UIManager:
         self.screen.blit(self.font_small.render(f"Shield (cost {COST_SHIELD}) - You have: {player_items['shield']}", True, WHITE), (rect.x + 20, y))
         y += 60
         self.screen.blit(self.font_small.render("Click item text to buy. Press S to close shop.", True, GRAY), (rect.x + 20, y))
-        return rect
+        return
 
     def draw_menu(self):
         screen = self.screen
@@ -245,7 +239,7 @@ class GameState:
         self.shop_open = False
 
     def spawn_tile(self):
-        fall_speed = BASE_FALL_SPEED + self.score * SPEED_PER_SCORE
+        fall_speed = BASE_FALL_SPEED + (self.score * SPEED_PER_SCORE)
         x = 40
         y = 75
         pstr, ans = generate_problem()
@@ -287,12 +281,10 @@ class GameApp:
         self.answer_buttons = [(pygame.Rect(right_x, y, button_w, button_h), "-") for y in btn_y_positions]
 
         # button flash
-        self.button_flash = [None] * len(self.answer_buttons)
-        self.button_flash_timer = [0.0] * len(self.answer_buttons)
+        self.button_flash = [None] * 3
+        self.button_flash_timer = [0.0] * 3
 
-        # cached UI interaction rects
-        self.menu_buttons = {}
-        self.tutorial_back = None
+
 
     def run(self):
         running = True
@@ -428,12 +420,10 @@ class GameApp:
                                             wrong_sfx.stop()
                                             oof_sfx.stop()
                                             taco_bell_sfx.play()
-                                break
 
 
-                        # skip/shield quick buttons (top-right)
+                        # skip quick buttons (top-right)
                         skip_btn = pygame.Rect(SCREEN_W - 140, 10, 120, 34)
-                        shield_btn = pygame.Rect(SCREEN_W - 280, 10, 120, 34)
                         if skip_btn.collidepoint(mx, my):
                             if self.gs.items.get("skip", 0) > 0 and self.gs.tiles:
                                 self.gs.items["skip"] -= 1
@@ -460,7 +450,7 @@ class GameApp:
 
             if self.state == "game" and self.gs.tiles and self.gs.tiles[0].y > SCREEN_H - 130:
                 self.gs.tiles.pop(0)
-                if self.gs.items.get("shield", 0) > 0:
+                if self.gs.items.get("shield") > 0:
                     self.gs.items["shield"] -= 1
                     shield_sfx.play()
                 else:
@@ -476,11 +466,11 @@ class GameApp:
                         oof_sfx.stop()
                         taco_bell_sfx.play()
 
-            # Update right panel choices (safe indexing)
+            # Update right panel choices
             active = self._get_active_tile()
             if active:
                 for i, (rect, _) in enumerate(self.answer_buttons):
-                    val = active.choices[i] if i < len(active.choices) else "-"
+                    val = active.choices[i]
                     self.answer_buttons[i] = (rect, val)
             else:
                 for i, (rect, _) in enumerate(self.answer_buttons):
@@ -501,10 +491,9 @@ class GameApp:
         pygame.quit()
 
     def _flash_button(self, index, color):
-        """Temporarily flash an answer button with a given color."""
-        if 0 <= index < len(self.answer_buttons):
-            self.button_flash[index] = color
-            self.button_flash_timer[index] = 0.025  # seconds to stay colored
+        #Temporarily flash an answer button with a given color.
+        self.button_flash[index] = color
+        self.button_flash_timer[index] = 0.025  # seconds to stay colored
 
     def _get_active_tile(self):
         return self.gs.tiles[0] if self.gs.tiles else None
@@ -559,4 +548,3 @@ class GameApp:
 # ----------------- Entry point ----------------- #
 if __name__ == "__main__":
     GameApp().run()
-
